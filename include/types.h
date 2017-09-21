@@ -17,6 +17,7 @@ typedef unsigned long  u32;
 typedef unsigned long long u64;
 
 typedef s32 status_t;
+typedef s64 nsecs_t;       // nano-seconds
 
 struct list_head {
 	struct list_head *next, *prev;

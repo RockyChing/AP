@@ -5,8 +5,10 @@
 #include <log.h>
 #include <atomic.h>
 #include <Mutex.h>
+#include <Condition.h>
 
 Mutex mLock;
+Condition mCond;
 
 static void check_builtin_type_size()
 {
@@ -34,9 +36,10 @@ int main(int argc, char **argv)
     (void)argc;
     int atomic_int = 1;
     int ret;
+    
     printf("%s enter.\n", argv[0]);
     check_builtin_type_size();
-
+    mCond.wait(mLock);
     ret = android_atomic_inc(&atomic_int);
     LOG("atomic_int: %d", atomic_int);
     LOG("ret: %d", ret);
