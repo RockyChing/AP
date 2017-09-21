@@ -16,7 +16,7 @@ typedef unsigned short u16;
 typedef unsigned long  u32;
 typedef unsigned long long u64;
 
-
+typedef s32 status_t;
 
 struct list_head {
 	struct list_head *next, *prev;
