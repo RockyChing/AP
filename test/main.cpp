@@ -6,6 +6,7 @@
 #include <atomic.h>
 #include <Mutex.h>
 #include <Condition.h>
+#include <StrongPointer.h>
 
 Mutex mLock;
 Condition mCond;
@@ -39,13 +40,10 @@ int main(int argc, char **argv)
     
     printf("%s enter.\n", argv[0]);
     check_builtin_type_size();
-    mCond.wait(mLock);
+    //mCond.wait(mLock);
     ret = android_atomic_inc(&atomic_int);
     LOG("atomic_int: %d", atomic_int);
     LOG("ret: %d", ret);
-
-
-
 
     sleep(4);
     printf("%s exit.\n", argv[0]);

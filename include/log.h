@@ -15,15 +15,15 @@
 #define LOG_VALID   LOG_DEBUG
 const int logtofile = 0;
 
-#define LOG(fmt, ...) do { \
-    if (0 <= LOG_VALID) { \
-        if (logtofile) { \
-            fprintf(NULL, "%s(%d): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
-            fflush(NULL); \
-        } else { \
+#define LOG(fmt, ...) do {                                                               \
+    if (0 <= LOG_VALID) {                                                                \
+        if (logtofile) {                                                                 \
+            fprintf(NULL, "%s(%d): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__);   \
+            fflush(NULL);                                                                \
+        } else {                                                                         \
             fprintf(stderr, "%s(%d): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
-        } \
-    } \
+        }                                                                                \
+    }                                                                                    \
 } while (0)
 
 #endif

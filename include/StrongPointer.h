@@ -38,7 +38,7 @@ inline bool operator _op_ (const sp<U>& o) const {    \
     return m_ptr _op_ o.m_ptr;                        \
 }                                                     \
 template<typename U>                                  \
-inline bool operator _op_ (const u* o) const {        \
+inline bool operator _op_ (const U* o) const {        \
     return m_ptr _op_ o;                              \
 }                                                     \
 inline bool operator _op_ (const wp<T>& o) const {    \
