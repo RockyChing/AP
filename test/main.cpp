@@ -10,11 +10,13 @@
 
 
 #include "RefBaseTest.h"
+#include "ThreadTest.h"
 
 Mutex mLock;
 Condition mCond;
 
-static void check_builtin_type_size() {
+static void check_builtin_type_size()
+{
     AutoMutex l(mLock);
     LOG("sizeof(char): %d", sizeof(char));
     LOG("sizeof(short): %d", sizeof(short));
@@ -22,7 +24,8 @@ static void check_builtin_type_size() {
     LOG("sizeof(long long): %d", sizeof(long long));
 }
 
-static void refbase_test() {
+static void refbase_test()
+{
 #if 1
     sp<RefBaseTest> pRefBaseTest = new RefBaseTest(1);
     LOG("data before set: %d", pRefBaseTest->getData());
@@ -37,7 +40,11 @@ static void refbase_test() {
 #endif
 }
 
-
+static void thread_test()
+{
+    sp<ThreadTest> pThreadTest = new ThreadTest();
+    pThreadTest->run();
+}
 
 
 
@@ -61,8 +68,12 @@ int main(int argc, char **argv)
     LOG("ret: %d", ret);
 
     refbase_test();
+    thread_test();
 
-    sleep(4);
+    while (1) {
+        sleep(4);
+    }
+
     printf("%s exit.\n", argv[0]);
     return 0;
 }
