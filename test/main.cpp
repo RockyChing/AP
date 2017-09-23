@@ -8,11 +8,13 @@
 #include <Condition.h>
 #include <StrongPointer.h>
 
+
+#include "RefBaseTest.h"
+
 Mutex mLock;
 Condition mCond;
 
-static void check_builtin_type_size()
-{
+static void check_builtin_type_size() {
     AutoMutex l(mLock);
     LOG("sizeof(char): %d", sizeof(char));
     LOG("sizeof(short): %d", sizeof(short));
@@ -20,7 +22,20 @@ static void check_builtin_type_size()
     LOG("sizeof(long long): %d", sizeof(long long));
 }
 
-
+static void refbase_test() {
+#if 1
+    sp<RefBaseTest> pRefBaseTest = new RefBaseTest(1);
+    LOG("data before set: %d", pRefBaseTest->getData());
+    pRefBaseTest->setData(5);
+    LOG("data after set: %d", pRefBaseTest->getData());
+#else
+    RefBaseTest *pRefBaseTest = new RefBaseTest(2);
+    LOG("data before set: %d", pRefBaseTest->getData());
+    pRefBaseTest->setData(51);
+    LOG("data after set: %d", pRefBaseTest->getData());
+    delete pRefBaseTest;
+#endif
+}
 
 
 
@@ -44,6 +59,8 @@ int main(int argc, char **argv)
     ret = android_atomic_inc(&atomic_int);
     LOG("atomic_int: %d", atomic_int);
     LOG("ret: %d", ret);
+
+    refbase_test();
 
     sleep(4);
     printf("%s exit.\n", argv[0]);
