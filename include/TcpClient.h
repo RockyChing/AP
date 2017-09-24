@@ -1,5 +1,6 @@
-#ifndef _LINUX_THREAD_TEST_H
-#define _LINUX_THREAD_TEST_H
+#ifndef _LINUX_TCP_CLIENT_H
+#define _LINUX_TCP_CLIENT_H
+
 #include <Thread.h>
 #include <log.h>
 #include <common.h>

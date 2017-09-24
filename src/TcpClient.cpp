@@ -253,8 +253,10 @@ int TcpClient::sendData(const u8 *buf, int len)
             loge("Error: send %s", strerror(errno));
             return -1;
         }
+
         written += last;
         retry ++;
+        sleep_ms(50);
     }
 
     if (retry == SEND_RETRY_MAX) {
