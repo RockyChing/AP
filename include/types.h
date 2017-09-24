@@ -23,6 +23,20 @@ struct list_head {
 	struct list_head *next, *prev;
 };
 
+#define STR_SPLIT_CNT      32
+#define STR_SPLIT_SUB_LEN  32
+#define STR_ERR_NO         0 // parase ok
+#define STR_ERR_NULL       1 // parameter is NULL
+#define STR_ERR_LEN        2 // parameter len too long
+#define STR_ERR_OUT_INDEX  3
+#define STR_ERR_IGNOR      4
+typedef struct _str_split_result {
+    char sub[STR_SPLIT_CNT][STR_SPLIT_SUB_LEN];
+    int  count;
+    int  err;
+} str_split_result_t;
+
+
 //#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 
 /**

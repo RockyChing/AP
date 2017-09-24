@@ -2,7 +2,7 @@
 #define _LINUX_THREAD_TEST_H
 #include <Thread.h>
 #include <log.h>
-#include <time.h>
+#include <common.h>
 
 
 class ThreadTest: public Thread {
@@ -36,7 +36,7 @@ bool ThreadTest::threadLoop()
     int count = 0;
     while (count++ < 5) {
         LOG("ThreadTest::threadLoop");
-        sleep(1);
+        sleep_s(1);
     }
 
     return true;
