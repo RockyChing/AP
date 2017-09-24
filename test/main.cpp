@@ -8,6 +8,7 @@
 #include <Condition.h>
 #include <StrongPointer.h>
 #include <Errors.h>
+#include <SignalHandler.h>
 
 #include "RefBaseTest.h"
 #include "ThreadTest.h"
@@ -89,6 +90,7 @@ static void str_split_test(const char *data, const char sepatator)
 
 int main(int argc, char **argv)
 {
+    sp<SignalHandler> pSignal = new SignalHandler();
     (void)argc;
     int atomic_int = 1;
     int ret;
