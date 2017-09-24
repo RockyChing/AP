@@ -19,7 +19,6 @@
 #include <sys/prctl.h>
 #endif
 
-#include <sched_policy.h>
 #include <Mutex.h>
 #include <Thread.h>
 #include <Errors.h>
