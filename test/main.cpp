@@ -8,6 +8,7 @@
 #include <Condition.h>
 #include <StrongPointer.h>
 
+#include <Errors.h>
 
 #include "RefBaseTest.h"
 #include "ThreadTest.h"
@@ -43,7 +44,10 @@ static void refbase_test()
 static void thread_test()
 {
     sp<ThreadTest> pThreadTest = new ThreadTest();
-    pThreadTest->run();
+    if (pThreadTest->readyToRun() == NO_ERROR) {
+        LOG("run thread");
+        pThreadTest->run("ThreadTest", PRIORITY_DEFAULT, 0);
+    }
 }
 
 

@@ -12,6 +12,9 @@ public:
 
 private:
     bool threadLoop();
+    void onFirstRef();
+    void onLastStrongRef(const void *);
+    void onLastWeakRef(const void *);
 
 private:
     int mCount;
@@ -30,12 +33,28 @@ ThreadTest::~ThreadTest()
 
 bool ThreadTest::threadLoop()
 {
-    while (1) {
+    int count = 0;
+    while (count++ < 5) {
         LOG("ThreadTest::threadLoop");
         sleep(1);
     }
 
     return true;
+}
+
+void ThreadTest::onFirstRef()
+{
+    LOG("ThreadTest onFirstRef");
+}
+
+void ThreadTest::onLastStrongRef(const void *)
+{
+    LOG("ThreadTest onLastStrongRef");
+}
+
+void ThreadTest::onLastWeakRef(const void *)
+{
+    LOG("ThreadTest onLastWeakRef");
 }
 
 

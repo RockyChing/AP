@@ -26,102 +26,30 @@
 #include <log.h>
 #define unused __attribute__((__unused__))
 
-typedef void* (*android_pthread_entry)(void*);
-
-void androidSetThreadName(const char* name) {
-#if defined(__linux__)
-    // Mac OS doesn't have this, and we build libutil for the host too
-    int hasAt = 0;
-    int hasDot = 0;
-    const char *s = name;
-    while (*s) {
-        if (*s == '.') hasDot = 1;
-        else if (*s == '@') hasAt = 1;
-        s++;
-    }
-    int len = s - name;
-    if (len < 15 || hasAt || !hasDot) {
-        s = name;
-    } else {
-        s = name + len - 15;
-    }
-    prctl(PR_SET_NAME, (unsigned long) s, 0, 0, 0);
-#endif
-}
+typedef void* (*pthread_entry)(void*);
 
 #ifdef HAVE_ANDROID_OS
-static pthread_t android_thread_id_t_to_pthread(android_thread_id_t thread)
+static pthread_t android_thread_id_t_to_pthread(thread_id_t thread)
 {
     return (pthread_t) thread;
 }
 #endif
 
-android_thread_id_t androidGetThreadId()
-{
-    return (android_thread_id_t)pthread_self();
-}
-
 // Get some sort of unique identifier for the current thread.
 inline thread_id_t getThreadId() {
-    return androidGetThreadId();
+    return (thread_id_t) pthread_self();
 }
 
-
-struct thread_data_t {
-    thread_func_t   entryFunction;
-    void*           userData;
-    int             priority;
-    char *          threadName;
-
-    // we use this trampoline when we need to set the priority with
-    // nice/setpriority, and name with prctl.
-    static int trampoline(const thread_data_t* t) {
-        thread_func_t f = t->entryFunction;
-        void* u = t->userData;
-        int prio = t->priority;
-        char * name = t->threadName;
-        delete t;
-        setpriority(PRIO_PROCESS, 0, prio);
-        if (prio >= ANDROID_PRIORITY_BACKGROUND) {
-            set_sched_policy(0, SP_BACKGROUND);
-        } else {
-            set_sched_policy(0, SP_FOREGROUND);
-        }
-
-        if (name) {
-            androidSetThreadName(name);
-            free(name);
-        }
-        return f(u);
-    }
-};
-
-static int androidCreateRawThreadEtc(android_thread_func_t entryFunction,
+static int createRawThread(thread_entry_func_t entryFunction,
         void *userData, const char *threadName,
         int32_t threadPriority,
         size_t threadStackSize,
-        android_thread_id_t *threadId)
+        thread_id_t *threadId)
 {
+    (void) threadPriority; // not support yet, avoid warning
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
-    if (threadPriority != PRIORITY_DEFAULT || threadName != NULL) {
-        // Now that the pthread_t has a method to find the associated
-        // android_thread_id_t (pid) from pthread_t, it would be possible to avoid
-        // this trampoline in some cases as the parent could set the properties
-        // for the child.  However, there would be a race condition because the
-        // child becomes ready immediately, and it doesn't work for the name.
-        // prctl(PR_SET_NAME) only works for self; prctl(PR_SET_THREAD_NAME) was
-        // proposed but not yet accepted.
-        thread_data_t* t = new thread_data_t;
-        t->priority = threadPriority;
-        t->threadName = threadName ? strdup(threadName) : NULL;
-        t->entryFunction = entryFunction;
-        t->userData = userData;
-        entryFunction = (android_thread_func_t)&thread_data_t::trampoline;
-        userData = t;
-    }
 
     if (threadStackSize) {
         pthread_attr_setstacksize(&attr, threadStackSize);
@@ -130,54 +58,24 @@ static int androidCreateRawThreadEtc(android_thread_func_t entryFunction,
     errno = 0;
     pthread_t thread;
     int result = pthread_create(&thread, &attr,
-                    (android_pthread_entry)entryFunction, userData);
+                    (pthread_entry) entryFunction, userData);
     pthread_attr_destroy(&attr);
     if (result != 0) {
-        LOG("androidCreateRawThreadEtc failed (entry=%p, res=%d, errno=%d)\n"
+        LOG("createRawThread failed (entry=%p, res=%d, errno=%d)\n"
              "(android threadPriority=%d)",
             entryFunction, result, errno, threadPriority);
         return 0;
+    } else {
+        LOG("createRawThread \"%s\" success.", threadName ? threadName : "default");
     }
 
     // Note that *threadID is directly available to the parent only, as it is
     // assigned after the child starts.  Use memory barrier / lock if the child
     // or other threads also need access.
     if (threadId != NULL) {
-        *threadId = (android_thread_id_t)thread; // XXX: this is not portable
+        *threadId = (thread_id_t) thread; // XXX: this is not portable
     }
     return 1;
-}
-
-// Used by the Java Runtime to control how threads are created, so that
-// they can be proper and lovely Java threads.
-typedef int (*android_create_thread_fn)(android_thread_func_t entryFunction,
-                                        void *userData,
-                                        const char* threadName,
-                                        int32_t threadPriority,
-                                        size_t threadStackSize,
-                                        android_thread_id_t *threadId);
-
-
-static android_create_thread_fn gCreateThreadFn = androidCreateRawThreadEtc;
-
-static int androidCreateThreadEtc(android_thread_func_t entryFunction,
-        void *userData, const char *threadName,
-        int32_t threadPriority,
-        size_t threadStackSize,
-        android_thread_id_t *threadId)
-{
-    return gCreateThreadFn(entryFunction, userData, threadName,
-        threadPriority, threadStackSize, threadId);
-}
-
-static inline bool createThreadEtc(thread_func_t entryFunction,
-        void *userData, const char *threadName = "unamed_thread",
-        int32_t threadPriority = PRIORITY_DEFAULT,
-        size_t threadStackSize = 0,
-        thread_id_t *threadId = 0)
-{
-    return androidCreateThreadEtc(entryFunction, userData, threadName,
-        threadPriority, threadStackSize, threadId) ? true : false; 
 }
 //-------------------------------------------------------------------------------------
 
@@ -185,8 +83,7 @@ static inline bool createThreadEtc(thread_func_t entryFunction,
 /*
  * This is our thread object!
  */
- Thread::Thread(bool canCallJava):
-    mCanCallJava(canCallJava),
+ Thread::Thread():
     mThread(thread_id_t(-1)),
     mStatus(NO_ERROR),
     mExitPending(false),
@@ -224,15 +121,7 @@ status_t Thread::run(const char * name, int32_t priority, size_t stack)
 
     mRunning = true;
 
-    bool res;
-    if (mCanCallJava) {
-        res = createThreadEtc(_threadLoop,
-                this, name, priority, stack, &mThread);
-    } else {
-        res = androidCreateRawThreadEtc(_threadLoop,
-                this, name, priority, stack, &mThread);
-    }
-
+    bool res = createRawThread(_threadLoop, this, name, priority, stack, &mThread);
     if (false == res) {
         mStatus = UNKNOWN_ERROR;
         mRunning = false;
@@ -269,7 +158,6 @@ int Thread::_threadLoop(void* user)
             first = false;
             self->mStatus = self->readyToRun();
             result = (self->mStatus == NO_ERROR);
-
             if (result && !self->exitPending()) {
                 // Binder threads (and maybe others) rely on threadLoop
                 // running at least once after a successful ::readyToRun()
@@ -289,18 +177,18 @@ int Thread::_threadLoop(void* user)
 
         // establish a scope for mLock
         {
-        Mutex::AutoLock _l(self->mLock);
-        if (result == false || self->mExitPending) {
-            self->mExitPending = true;
-            self->mRunning = false;
-            // clear thread ID so that requestExitAndWait() does not exit if
-            // called by a new thread using the same thread ID as this one.
-            self->mThread = thread_id_t(-1);
-            // note that interested observers blocked in requestExitAndWait are
-            // awoken by broadcast, but blocked on mLock until break exits scope
-            self->mThreadExitedCondition.broadcast();
-            break;
-        }
+            Mutex::AutoLock _l(self->mLock);
+            if (result == false || self->mExitPending) {
+                self->mExitPending = true;
+                self->mRunning = false;
+                // clear thread ID so that requestExitAndWait() does not exit if
+                // called by a new thread using the same thread ID as this one.
+                self->mThread = thread_id_t(-1);
+                // note that interested observers blocked in requestExitAndWait are
+                // awoken by broadcast, but blocked on mLock until break exits scope
+                self->mThreadExitedCondition.broadcast();
+                break;
+            }
         }
 
         // Release our strong reference, to let a chance to the thread
@@ -379,6 +267,7 @@ pid_t Thread::getTid() const
         LOG("Thread (this=%p): getTid() is undefined before run()", this);
         tid = -1;
     }
+
     return tid;
 }
 

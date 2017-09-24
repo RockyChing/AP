@@ -33,7 +33,7 @@ public:
      * Create a thread object, but doesn't create or start the associated
      * thread. See the run() method
      */
-            Thread(bool canCallJava = true);
+             Thread();
     virtual ~Thread();
 
     // Start the thread in threadLoop() which needs to be implemented
@@ -88,7 +88,6 @@ private:
 private:
     Thread& operator=(const Thread&);
     static  int             _threadLoop(void* user);
-    const   bool            mCanCallJava;
     // always hold mLock when reading or writing
             thread_id_t     mThread;
     mutable Mutex           mLock;
@@ -105,53 +104,6 @@ private:
      */
     pid_t mTid;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #endif
