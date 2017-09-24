@@ -9,16 +9,16 @@
 #include <StrongPointer.h>
 #include <Errors.h>
 #include <SignalHandler.h>
+#include <TcpClient.h>
 
 #include "RefBaseTest.h"
 #include "ThreadTest.h"
 
-#define TEST_SIZE      0
-#define TEST_REFBASE   0
-#define TEST_THREAD    1
-#define TEST_STR_SPLIT 1
-
-
+#define TEST_SIZE       0
+#define TEST_REFBASE    0
+#define TEST_THREAD     0
+#define TEST_STR_SPLIT  1
+#define TEST_TCP_CLIENT 1
 
 
 
@@ -118,6 +118,14 @@ int main(int argc, char **argv)
 
     const char *data3 = "$GPRMC,024813.640,A,3158.4608,N,11848.3737,E,10.05,324.27,150706,,,A*50";
     str_split_test(data3, ',');
+#endif
+
+#if TEST_TCP_CLIENT
+    sp<TcpClient> pTcpClient = new TcpClient();
+    if (pTcpClient->readyToRun() == NO_ERROR) {
+        LOG("run thread");
+        pTcpClient->run("TcpClient", PRIORITY_DEFAULT, 0);
+    }
 #endif
 
     while (1) {
