@@ -6,6 +6,7 @@
 #include <fcntl.h>
 
 #include <log.h>
+#include <common.h>
 #include <ComPort.h>
 
 #define logd LOG
@@ -210,6 +211,7 @@ int ComPort::readPort(u8 *buf, int len)
     int readBytes = read(mFd, buf, len -1);
     if (readBytes > 0) {
         buf[readBytes] = '\0';
+        dump("<s ", buf, readBytes);
     } else if (readBytes < 0) {
         loge("Error: %s", strerror(errno));
     } else {
@@ -230,5 +232,43 @@ int ComPort::writePort(const u8 *buf, int len)
         loge("Error: %s", strerror(errno));
     }
     return writeBytes;
+}
+
+int ComPort::dump(const char * prefix, const u8 * ptr, u32 length)
+{
+    char buffer[100] = {'\0'};
+    u32  offset = 01;
+    int  i;
+    AutoMutex _l(mLock);
+
+    while (offset < length) {
+        int off;
+        strcpy(buffer, prefix);
+        off = strlen(buffer);
+        ASSERT(snprintf(buffer + off, sizeof(buffer) - off, "%08x: ", offset));
+        off = strlen(buffer);
+
+        for (i = 0; i < 16; i ++) {
+            if (offset + i < length) {
+                ASSERT(snprintf(buffer + off, sizeof(buffer) - off, "%02x%c", ptr[offset + i], i == 7 ? '-' : ' '));
+            } else {
+                ASSERT(snprintf(buffer + off, sizeof(buffer) - off, " .%c", i == 7 ? '-' : ' '));
+            }
+            off = strlen(buffer);
+        }
+
+        ASSERT(snprintf(buffer + off, sizeof(buffer) - off, " "));
+		off = strlen(buffer);
+		for (i = 0; i < 16; i++)
+			if (offset + i < length) {
+				ASSERT(snprintf(buffer + off, sizeof(buffer) - off, "%c", (ptr[offset + i] < ' ') ? '.' : ptr[offset + i]));
+				off = strlen(buffer);
+			}
+
+        offset += 16;
+		LOG("== %s", buffer);
+    }
+
+    return 0;
 }
 

@@ -1,8 +1,22 @@
 #ifndef _LINUX_COMMON_H
 #define _LINUX_COMMON_H
+#include <stdio.h>
 #include <unistd.h>
+#include <string.h>
+
 
 #include <types.h>
+#include <log.h>
+
+#ifndef min
+#define min(a,b) (((a) < (b)) ? (a) :(b))
+#endif
+
+#define ASSERT(v) do {                                                 \
+    if ((v) < 0) {                                                     \
+        LOG("system-error: '%s' (code: %d)", strerror(errno), errno);  \
+        return -1; }                                                   \
+    } while (0)
 
 void inline sleep_s(int32_t sec)
 {

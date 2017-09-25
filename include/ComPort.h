@@ -2,7 +2,7 @@
 #define _LINUX_COMPORT_H
 
 #include <types.h>
-
+#include <Mutex.h>
 
 class ComPort {
     static const int DEFAULT_PORT_SPEED = 9600;
@@ -47,6 +47,7 @@ private:
 
     int init(int fd);
     int getBaudAlias(int speed);
+    int dump(const char *prefix, const u8 *ptr, u32 length);
 
 private:
     const char *mPortName;
@@ -56,6 +57,8 @@ private:
     int mPortDataBits;
     int mPortDataParity;
     int mPortStopBits;
+
+    Mutex mLock;
 };
 
 
