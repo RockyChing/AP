@@ -122,6 +122,7 @@ int main(int argc, char **argv)
 
 #if TEST_TCP_CLIENT
     sp<TcpClient> pTcpClient = new TcpClient();
+    pTcpClient->setServer("192.168.1.155", 8234);
     if (pTcpClient->readyToRun() == NO_ERROR) {
         LOG("run thread");
         pTcpClient->run("TcpClient", PRIORITY_DEFAULT, 0);

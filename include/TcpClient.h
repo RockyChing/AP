@@ -6,6 +6,10 @@
 #include <common.h>
 
 class TcpClient : public Thread {
+    static const u32 TICK_PERIOD = 10 * 1000; // ms
+    static void getTimestamp(char *buf, int len);
+    static bool isValidIpAddr(const char *addr);
+
 public:
     enum NetType {
         NET_TYPE_MOBILE,
@@ -17,6 +21,8 @@ public:
      TcpClient();
      TcpClient(NetType type);
     ~TcpClient();
+
+    void setServer(const char *srvAddr, u16 port);
 
 // private methods
 private:
@@ -38,6 +44,8 @@ private:
     bool recvMsgPacket();
     bool sendMsgPacket();
     bool isHeartBeatErr();
+
+    int sendHeartBeatMsg();
 
 // disable cope construct & operator =
 private:
@@ -65,6 +73,11 @@ private:
 
 	u8 *mRecvBuf;
     u8 *mSendBuf;
+
+    u32 mLastTick;
+
+    char mSrvAddr[32];
+    u16  mSrvPort;
 };
 
 

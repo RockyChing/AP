@@ -41,6 +41,9 @@ static bool isLeapYear(u32 year)
     return ret;
 }
 
+/**
+ * In unit millisecond
+ */
 u32 get_tick()
 {
     struct timespec ts;

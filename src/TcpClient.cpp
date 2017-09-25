@@ -30,10 +30,13 @@ TcpClient::TcpClient() :
     mType(NET_TYPE_ETHERNET),
     mSocket(-1),
     mStatus(NET_STATUS_DISCONNECT),
-    mRecvBuf(NULL), mSendBuf(NULL)
+    mRecvBuf(NULL), mSendBuf(NULL),
+    mLastTick(0),
+    mSrvPort(8000)
     
 {
     LOG("TcpClient create default");
+    memset(mSrvAddr, '\0', sizeof(mSrvAddr));
 }
 
 TcpClient::TcpClient(NetType type) :
@@ -41,9 +44,12 @@ TcpClient::TcpClient(NetType type) :
     mType(type),
     mSocket(-1),
     mStatus(NET_STATUS_DISCONNECT),
-    mRecvBuf(NULL), mSendBuf(NULL)
+    mRecvBuf(NULL), mSendBuf(NULL),
+    mLastTick(0),
+    mSrvPort(8000)
 {
     LOG("TcpClient create");
+    memset(mSrvAddr, '\0', sizeof(mSrvAddr));
 }
 
 TcpClient::~TcpClient()
@@ -86,13 +92,59 @@ void TcpClient::onFirstRef()
     mSendBuf = NULL;
 }
 
+/**
+ * Format: [2017-09-25 10:00:53]
+ */
+void TcpClient::getTimestamp(char *buf, int len)
+{
+    if (buf == NULL || len < strlen("[2017-09-25 10:00:53]")) {
+        loge("Error: parameters");
+        return;
+    }
+
+    time_t now = time(NULL);
+    /**
+     * struct tm {
+     *     int tm_sec;    // Seconds (0-60)
+     *     int tm_min;    // Minutes (0-59)
+     *     int tm_hour;   // Hours (0-23)
+     *     int tm_mday;   // Day of the month (1-31)
+     *     int tm_mon;    // Month (0-11)
+     *     int tm_year;   // Year - 1900
+     *     int tm_wday;   // Day of the week (0-6, Sunday = 0)
+     *     int tm_yday;   // Day in the year (0-365, 1 Jan = 0)
+     *     int tm_isdst;  // Daylight saving time
+     * };
+     */
+    struct tm *tm = localtime(&now);
+    snprintf(buf, len, "[%d-%02d-%02d %02d:%02d:%02d] heartbeat.",
+        tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+}
+
+bool TcpClient::isValidIpAddr(const char * addr)
+{
+    if (addr == NULL) return false;
+
+    return true;
+}
+
+void TcpClient::setServer(const char *srvAddr, u16 port)
+{
+    if (srvAddr == NULL || !isValidIpAddr(srvAddr)) {
+        loge("Error: parameter");
+        return;
+    }
+
+    strncpy(mSrvAddr, srvAddr, sizeof(mSrvAddr) - 1);
+    mSrvPort = port;
+}
+
 bool TcpClient::threadLoop()
 {
     int ret = -1;
     mStatus = NET_STATUS_DISCONNECT;
 
     while (!mStop) {
-        logd("tick: %d", get_tick());
         if (NET_STATUS_DISCONNECT == mStatus || mSocket == -1) {
             if (!reConnect()) {
                 sleep_ms(500);
@@ -103,18 +155,38 @@ bool TcpClient::threadLoop()
 
         struct timeval tv;
         fd_set fd_read;
+        fd_set fd_write;
+
         FD_ZERO(&fd_read);
+        FD_ZERO(&fd_write);
+
         FD_SET(mSocket, &fd_read);
+        FD_SET(mSocket, &fd_write);
+
         tv.tv_sec = 0;
-        tv.tv_usec = 500*1000;
-        
+        tv.tv_usec = 50*1000;
         ret = select(mSocket + 1, &fd_read, NULL, NULL, &tv);
-        if (ret > 0) {
+        if (ret >= 0) {
             if (FD_ISSET(mSocket, &fd_read)) {
-                if (recvData(mRecvBuf, NET_CAPACITY_RECVBUF) == -1) {
+                /**
+                 * Handle data recv
+                 */
+                ret = recvData(mRecvBuf, NET_CAPACITY_RECVBUF);
+                if (ret > 0) {
+                    logd("recvData: %s", mRecvBuf);
+                } else if (ret == -1) { // error
                     loge("ERROR: recvData");
                 } else {
-                    logd("recvData: %s", mRecvBuf);
+                    // Maybe server has closed
+                    //logd("recvData return: %d", ret);
+                }
+            } else if (FD_ISSET(mSocket, &fd_write)) {
+                /**
+                 * Handle data write
+                 */
+                if ((get_tick() - mLastTick) > TICK_PERIOD) {
+                    mLastTick = get_tick();
+                    sendHeartBeatMsg();
                 }
             }
         } else {
@@ -132,7 +204,7 @@ bool TcpClient::threadLoop()
 				loge("Interrupt signal EINVAL caught");
 				break;
 			default:
-				loge("Unknown interrupt signal caught\n");
+				loge("Interrupt signal %d caught, it says \"%s\"", errno, strerror(errno));
 			}
 
 			//goto terminate;
@@ -191,11 +263,17 @@ bool TcpClient::reConnect()
 {
     bool ret = false;
     const char *ifName = "eth0";
-    const char *srvIp = "192.200.5.130";
-    const unsigned short svrPort = 8234;
-    const unsigned int svrNetIp = inet_addr(srvIp);
+    const char *srvIp = mSrvAddr;
+    const unsigned short svrPort = mSrvPort;
 
     do {
+        if (!isValidIpAddr(srvIp)) {
+            loge("ERROR: invalid ip address");
+            break;
+        } else {
+            const unsigned int svrNetIp = inet_addr(srvIp);
+        }
+
         if (!closeConnection()) {
             loge("ERROR: closeConnection");
             break;
@@ -304,3 +382,14 @@ bool TcpClient::isHeartBeatErr()
     bool ret = false;
     return ret;
 }
+
+int TcpClient::sendHeartBeatMsg()
+{
+    char timeStamp[32] = {'\0'};
+    char sendBuf[64] = {'\0'};
+    getTimestamp(timeStamp, sizeof(timeStamp) - 1);
+    snprintf(sendBuf, sizeof(sendBuf) - 1, "%s heartbeat.", timeStamp);
+    sendData((const u8 *)sendBuf, strlen(sendBuf));
+    return 0;
+}
+
