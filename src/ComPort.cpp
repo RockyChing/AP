@@ -2,7 +2,8 @@
 
 #include <ComPort.h>
 
-ComPort::ComPort(const char *portNode):
+ComPort::ComPort(const char *portName):
+        mPortName(devName),
         mPortSpeed(ComPort::DEFAULT_PORT_SPEED),
         mPortDataBits(COM_DATA_8_BITS),
         mPortDataParity(COM_PARITY_NONE),
@@ -10,14 +11,20 @@ ComPort::ComPort(const char *portNode):
 {
 }
 
-ComPort::ComPort(const char * portNode, int portSpeed, int portDataBits,
+ComPort::ComPort(const char *portName, int portSpeed, int portDataBits,
         int portDataParity, int portStopBits):
+        mPortName(devName),
         mPortSpeed(portSpeed),
         mPortDataBits(portDataBits),
         mPortDataParity(portDataParity),
         mPortStopBits(portStopBits)
         
 {
+}
+
+int ComPort::init(int fd)
+{
+    return -1;
 }
 
 int ComPort::openPort()

@@ -30,8 +30,8 @@ private:
     };
 
 public:
-    ComPort(const char *portNode);
-    ComPort(const char *portNode, int portSpeed,
+    ComPort(const char *portName);
+    ComPort(const char *portName, int portSpeed,
         int portDataBits, int portDataParity, int portStopBits);
 
      int openPort();
@@ -45,7 +45,9 @@ private:
     ComPort(const ComPort &);
     ComPort& operator=(const ComPort &);
 
+    int init(int fd);
 private:
+    const char *mPortName;
     int mFd;
     int mPortSpeed;
     int mPortDataBits;
