@@ -11,7 +11,6 @@
 
 #define logd LOG
 #define loge LOG
-#define NUM_ELEMENTS(arr) (sizeof(arr) / sizeof(arr[0]))
 
 struct BaudAlias {
     int baud;
@@ -69,7 +68,11 @@ ComPort::~ComPort()
 
 int ComPort::init(int fd)
 {
+    int fdflags;
+	ASSERT(fdflags = fcntl(fd, F_GETFL));
+	ASSERT(fcntl(fd, F_SETFL, fdflags & ~O_NONBLOCK));
     struct termios options;
+
     /**
      * Return 0 on success, -1 on failure and set errno to indicate the error
      */
@@ -81,7 +84,6 @@ int ComPort::init(int fd)
     int baudAlias = getBaudAlias(mPortSpeed);
     cfsetispeed(&options,  baudAlias);
     cfsetospeed(&options,  baudAlias);
-    options.c_cflag &= ~CSIZE;
     switch (mPortDataBits) {
         case COM_DATA_8_BITS:
             options.c_cflag |= CS8;
@@ -136,8 +138,8 @@ int ComPort::init(int fd)
     options.c_oflag  &= ~(OPOST | OCRNL);
     options.c_iflag &= ~(IGNPAR | PARMRK | ISTRIP | IXANY | ICRNL);
     options.c_iflag &= ~(IXON | IXOFF | BRKINT);
-    options.c_cc[VTIME] = 1;
-    options.c_cc[VMIN] = 0;
+    options.c_cc[VTIME] = 0;
+    options.c_cc[VMIN] = 1;
 
     tcflush(fd, TCIFLUSH);
     if (tcsetattr(fd, TCSANOW, &options) != 0) {
@@ -150,8 +152,8 @@ int ComPort::init(int fd)
 
 int ComPort::getBaudAlias(int speed)
 {
-    u16 i;
-    for (i = 0; i < NUM_ELEMENTS(BaudArray); i ++) {
+    s16 i;
+    for (i = NUM_ELEMENTS(BaudArray) - 1; i >= 0; i --) {
         if (speed == BaudArray[i].baud)
             return BaudArray[i].baudalias;
     }
@@ -232,6 +234,11 @@ int ComPort::writePort(const u8 *buf, int len)
         loge("Error: %s", strerror(errno));
     }
     return writeBytes;
+}
+
+int ComPort::getFd() const
+{
+    return mFd;
 }
 
 int ComPort::dump(const char * prefix, const u8 * ptr, u32 length)

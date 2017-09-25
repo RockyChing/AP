@@ -10,6 +10,7 @@
 #include <Errors.h>
 #include <SignalHandler.h>
 #include <TcpClient.h>
+#include <SerialThread.h>
 
 #include "RefBaseTest.h"
 #include "ThreadTest.h"
@@ -19,6 +20,7 @@
 #define TEST_THREAD     0
 #define TEST_STR_SPLIT  1
 #define TEST_TCP_CLIENT 1
+#define TEST_SERIAL     1
 
 
 
@@ -124,8 +126,16 @@ int main(int argc, char **argv)
     sp<TcpClient> pTcpClient = new TcpClient();
     pTcpClient->setServer("192.168.1.155", 8234);
     if (pTcpClient->readyToRun() == NO_ERROR) {
-        LOG("run thread");
+        LOG("run TcpClient thread");
         pTcpClient->run("TcpClient", PRIORITY_DEFAULT, 0);
+    }
+#endif
+
+#if TEST_SERIAL
+    sp<SerialThread> pSerialThread = new SerialThread();
+    if (pSerialThread->readyToRun() == NO_ERROR) {
+        LOG("run SerialThread thread");
+        pSerialThread->run("SerialThread", PRIORITY_DEFAULT, 0);
     }
 #endif
 

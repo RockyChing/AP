@@ -18,6 +18,9 @@
         return -1; }                                                   \
     } while (0)
 
+#define NUM_ELEMENTS(arr) (sizeof(arr) / sizeof(arr[0]))
+
+
 void inline sleep_s(int32_t sec)
 {
     usleep(sec * 1000 * 1000);

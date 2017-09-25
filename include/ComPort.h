@@ -3,9 +3,10 @@
 
 #include <types.h>
 #include <Mutex.h>
+#include <RefBase.h>
 
-class ComPort {
-    static const int DEFAULT_PORT_SPEED = 9600;
+class ComPort : public RefBase {
+    static const int DEFAULT_PORT_SPEED = 115200;
 
 
 private:
@@ -37,6 +38,7 @@ public:
      int openPort();
      int readPort(u8 *buf, int len);
      int writePort(const u8 *buf, int len);
+     int getFd() const;
 
 // disable default constructor & copy construct & operator =
 private:
