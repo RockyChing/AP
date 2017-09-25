@@ -117,15 +117,20 @@ void TcpClient::getTimestamp(char *buf, int len)
      * };
      */
     struct tm *tm = localtime(&now);
-    snprintf(buf, len, "[%d-%02d-%02d %02d:%02d:%02d] heartbeat.",
+    snprintf(buf, len, "[%d-%02d-%02d %02d:%02d:%02d]",
         tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 }
 
-bool TcpClient::isValidIpAddr(const char * addr)
+bool TcpClient::isValidIpAddr(const char *addr)
 {
     if (addr == NULL) return false;
+    if (strcmp(addr, "255.255.255.255") == 0) {
+        return true;
+    } else {
+        return inet_addr(addr) != INADDR_NONE;
+    }
 
-    return true;
+    return false;
 }
 
 void TcpClient::setServer(const char *srvAddr, u16 port)
