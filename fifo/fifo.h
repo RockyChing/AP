@@ -5,6 +5,13 @@ typedef struct spinlock {
     unsigned int count;
 } spinlock_t;
 
+/*
+ * kfifo->size的值总是2的幂，好处--对kfifo->size取模运算可以转化为与运算，如：
+ * kfifo->in % kfifo->size 可以转化为 kfifo->in & (kfifo->size – 1)
+ *
+ * kfifo的巧妙之处在于in和out定义为无符号类型，在put和get时，in和out都是增加
+ * 当达到最大值时，产生溢出，自动从0开始
+ */
 struct kfifo {
     unsigned char *buffer;	/* the buffer holding the data */
 	unsigned int   size;	/* the size of the allocated buffer */
